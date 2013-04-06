@@ -10,6 +10,12 @@
    (topics :initform (make-hash-table :test 'equal)
            :accessor topics)))
 
+(defun top (n alist)
+  (subseq (sort alist #'> :key #'cdr) 0 n))
+
+(defun top-histo (n &key topic (db *db*))
+  (top n (histo :topic topic :db db)))
+
 (defun add-dir (directory &optional (db *db*))
   (when (cl-fad:directory-exists-p directory)
     (cl-fad:walk-directory
