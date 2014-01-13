@@ -2,7 +2,6 @@
   (:use :cl :lisp-unit))
 
 (in-package :abc-histo)
-(defvar *db*)
 
 (defclass memory-db ()
   ((words :initform (make-hash-table :test 'equal)
@@ -13,10 +12,10 @@
 (defun top (n alist)
   (subseq (sort alist #'> :key #'cdr) 0 n))
 
-(defun top-histo (n &key topic (db *db*))
-  (top n (histo :topic topic :db db)))
+(defun top-histo (n db &key topic)
+  (top n (histo db :topic topic)))
 
-(defun add-dir (directory &optional (db *db*))
+(defun add-dir (directory db)
   (when (cl-fad:directory-exists-p directory)
     (cl-fad:walk-directory
      directory
@@ -27,18 +26,18 @@
               while line
               do (add-line line topic db))))))))
 
-(defun histo (&key topic (db *db*))
+(defun histo (db &key topic)
   (if topic
       (alexandria:hash-table-alist (gethash (string-downcase topic) (topics db)))
       (histogram db)))
 
-(defun search-histo (prefix &key topic (db *db*))
+(defun search-histo (prefix db &key topic)
   (let ((prefix (string-downcase prefix)))
     (remove-if-not (lambda (word-count)
                      (alexandria:starts-with-subseq prefix (car word-count)))
-                   (histo :topic topic :db db))))
+                   (histo db :topic topic))))
 
-(defun add (abcstring &key topic (db *db*))
+(defun add (abcstring db &key topic)
   (add-line abcstring topic db))
 
 (defun add-line (abcstring topic db)
@@ -64,27 +63,27 @@
 (remove-tests :all)
 
 (define-test abc-histo-add
-  (let ((*db* (make-instance 'memory-db))
+  (let ((db (make-instance 'memory-db))
         (data "A Arnold  Annette"))
-    (add data)
-    (assert-equal 1 (count-of "arnold" *db*))))
+    (add data db)
+    (assert-equal 1 (count-of "arnold" db))))
 
 (define-test abc-histo-histogram
-  (let ((*db* (make-instance 'memory-db))
+  (let ((db (make-instance 'memory-db))
         (data "A Arnold Annette annette"))
-    (add data)
-    (assert-equal 1 (cdr (assoc "arnold" (histo) :test #'string=)))
-    (assert-equal 2 (cdr (assoc "annette" (histo) :test #'string=)))))
+    (add data db)
+    (assert-equal 1 (cdr (assoc "arnold" (histo db) :test #'string=)))
+    (assert-equal 2 (cdr (assoc "annette" (histo db) :test #'string=)))))
 
 (define-test abc-search-topic
-  (let ((*db* (make-instance 'memory-db)))
-    (add "A Arnold Alice" :topic "Names")
-    (add "A Anbei")
-    (assert-true (assoc "arnold" (histo :topic "Names") :test #'string=))
-    (assert-false (assoc "anbei" (histo :topic "Names") :test #'string=))
-    (assert-true (search-histo "ar" :topic "names"))
-    (assert-true (search-histo "An"))
-    (assert-false (search-histo "an" :topic "names"))))
+  (let ((db (make-instance 'memory-db)))
+    (add "A Arnold Alice" db :topic "Names")
+    (add "A Anbei" db)
+    (assert-true (assoc "arnold" (histo db :topic "Names") :test #'string=))
+    (assert-false (assoc "anbei" (histo db :topic "Names") :test #'string=))
+    (assert-true (search-histo "ar" db :topic "names"))
+    (assert-true (search-histo "An" db))
+    (assert-false (search-histo "an" db :topic "names"))))
 
 (let ((*print-failures* t)
       (*print-errors* t))
